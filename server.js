@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import { JSDOM } from "jsdom";
 import * as deepl from "deepl-node";
 import fs from "node:fs/promises";
-import path from "node:path";
 
 dotenv.config();
 
@@ -15,26 +14,48 @@ app.use(express.static("public"));
 
 // Dynamically generate links to any results-pages that may exist.
 app.get("/pages", async (req, res) => {
-    const resultsDir = "./public/results";
-    const files = await fs.readdir(resultsDir);
-    console.log(files);
-    res.json(JSON.stringify(files));
+  const resultsDir = "./public/results";
+  const files = await fs.readdir(resultsDir);
+  console.log(files);
+  res.json(JSON.stringify(files));
 });
 
 app.post("/translate", async (req, res) => {
-  console.log(req.body);
+  const dom = new JSDOM(req.body.html);
 
-  await translateArray();
-  await translateHtml();
+  const arrayTranslated = await translateArray(dom);
+  //const htmlTranslated = await translateHtml(dom);
+
+  console.log(arrayTranslated);
 
   // Test creating a new translated html page
-/*   const name = "test.html";
+  /*   const name = "test.html";
   const fileCreated = await createFile(name, req.body.html);
   fileCreated ? res.json({ fileName: name }) : res.json({ fileName: null }); */
 });
 
-async function translateArray(){
-    
+async function translateArray(dom) {
+  const doc = dom.window.document;
+  console.log(doc.body);
+  const textNodes = [];
+  const walker = doc.createTreeWalker(
+    doc.body,
+    dom.window.NodeFilter.SHOW_TEXT,
+  );
+
+  let node;
+
+  while ((node = walker.nextNode())) {
+    textNodes.push(node);
+  }
+
+  /* TODO
+  * Check to see if removing nodes with empty spaces (line breaks, tabs, spaces) affects cost
+   */
+  const textToTranslate = textNodes.map((node) => node.nodeValue);
+  console.log(textToTranslate);
+
+  return "Array translated";
 }
 
 async function createFile(name, html) {

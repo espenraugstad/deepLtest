@@ -18,11 +18,14 @@ git clone https://github.com/espenraugstad/deepLtest.git
 npm install
 ```
 
-I tillegg må det opprettes en env-fil som inneholder en serverport og en api-nøkkel til DeepL. Åpne filen og fyll inn din egen nøkkel.
+I tillegg må det opprettes en env-fil som inneholder en serverport og en API-nøkkel til DeepL. Åpne filen og fyll inn din egen nøkkel.
 
 ``` bash
 echo "PORT=3000\nAPI_KEY=" > .env
 ```
+
+> [!NOTE]
+> Koden kjører også selv om det ikke er lagt inn en faktisk API-nøkkel. Det kan være nyttig for å se resultatene.
 
 Serveren kan så startes med 
 

@@ -35,7 +35,11 @@ translateBtn.addEventListener("click", async () => {
   });
 
   const data = await res.json();
-  console.log(data);
+  console.log(typeof data);
+  if(typeof data === "string"){
+    alert(data);
+    return;
+  }
 
   if (!data.length === 0) return;
   console.log("Creating links");

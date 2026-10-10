@@ -10,8 +10,10 @@ const app = express();
 const port = process.env.PORT;
 const API_KEY = process.env.API_KEY || "";
 
-
-const deeplClient = new deepl.DeepLClient(API_KEY);
+let deeplClient = null;
+if (API_KEY !== "") {
+  deeplClient = new deepl.DeepLClient(API_KEY);
+}
 
 const TRANSLATION_RESULTS = {
   "billedArray": {
@@ -37,6 +39,13 @@ app.post("/translate", async (req, res) => {
   //const body = "<div><h1>Hallo Verden</h1><p>Hvordan går det?</p><p>   </p></div>";
   const filesCreated = [];
 
+  if(!deeplClient){
+    res.json("No API-key!");
+    return;
+  }
+
+  console.log("Opps");
+
   // Translate with array of extracted text
   const arrayTranslated = await translateArray(body);
   const arrayFile = await createFile("array_translation.html", arrayTranslated);
@@ -60,7 +69,7 @@ app.post("/translate", async (req, res) => {
     <p>Antall tegn brukt på oversettelse av html direkte: ${TRANSLATION_RESULTS.billedHtml}</p>
   `;
   const summaryFile = await createFile("summary.html", summaryHtml);
-  if(summaryFile){
+  if (summaryFile) {
     filesCreated.push(summaryFile);
   }
 
@@ -101,15 +110,15 @@ async function translateArray(html) {
     translatedText.push("lorem");
   } */
 
-    const translation = await deeplClient.translateText(textToTranslate, "NB", "EN-GB", {modelType: "prefer_quality_optimized"});
-    console.log(translation);
+  const translation = await deeplClient.translateText(textToTranslate, "NB", "EN-GB", { modelType: "prefer_quality_optimized" });
+  console.log(translation);
   /*-----------------
   */
 
   // Replace translated text in each node
   textNodes.forEach((node, index) => {
     node.nodeValue = translation[index].text;
-    if(/^[\\n\\t\s]*$/.test(translation[index].text)){
+    if (/^[\\n\\t\s]*$/.test(translation[index].text)) {
       TRANSLATION_RESULTS.billedArray.empty += translation[index].billedCharacters;
     } else {
       TRANSLATION_RESULTS.billedArray.text += translation[index].billedCharacters;
@@ -146,8 +155,8 @@ async function createFile(name, html) {
 
   // If file exists, add an index to the end
   let index = 1;
-  while(files.includes(name)){
-    name = name.slice(0,-5) + "_" + index + ".html";
+  while (files.includes(name)) {
+    name = name.slice(0, -5) + "_" + index + ".html";
     index += 1;
   }
 

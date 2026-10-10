@@ -16,17 +16,29 @@ app.use(express.static("public"));
 app.get("/pages", async (req, res) => {
   const resultsDir = "./public/results";
   const files = await fs.readdir(resultsDir);
-  console.log(files);
   res.json(JSON.stringify(files));
 });
 
 app.post("/translate", async (req, res) => {
   const dom = new JSDOM(req.body.html);
+  const filesCreated = [];
 
-  const arrayTranslated = await translateArray(dom);
-  //const htmlTranslated = await translateHtml(dom);
+  // Translate with array of extracted text
+  const arrayTranslated = await translateArray(req.body.html);
+  const arrayFile = await createFile("array_translation.html", arrayTranslated);
+  if (arrayFile) {
+    filesCreated.push("array_translation.html");
+  }
 
-  console.log(arrayTranslated);
+  // Translate entire html directly
+  const htmlTranslated = await translateHtml(req.body.html);
+  const htmlFile = await createFile("html_translation.html", htmlTranslated);
+  if(htmlFile){
+    filesCreated.push("html_translation.html");
+  }
+
+
+  res.json(filesCreated);
 
   // Test creating a new translated html page
   /*   const name = "test.html";
@@ -34,9 +46,9 @@ app.post("/translate", async (req, res) => {
   fileCreated ? res.json({ fileName: name }) : res.json({ fileName: null }); */
 });
 
-async function translateArray(dom) {
+async function translateArray(html) {
+  const dom = new JSDOM(html);
   const doc = dom.window.document;
-  console.log(doc.body);
   const textNodes = [];
   const walker = doc.createTreeWalker(
     doc.body,
@@ -53,9 +65,37 @@ async function translateArray(dom) {
   * Check to see if removing nodes with empty spaces (line breaks, tabs, spaces) affects cost
    */
   const textToTranslate = textNodes.map((node) => node.nodeValue);
-  console.log(textToTranslate);
 
-  return "Array translated";
+  /* TRANSLATE ARRAY 
+  ----------------- */
+
+  // Mock translation:
+  let translatedText = [];
+  for (const text of textToTranslate) {
+    translatedText.push("lorem");
+  }
+  /*-----------------
+  */
+
+  // Replace translated text in each node
+  textNodes.forEach((node, index) => {
+    node.nodeValue = translatedText[index];
+  });
+
+  return dom.serialize();
+}
+
+async function translateHtml(html) {
+
+  /* TRANSLATE HTML 
+----------------- */
+
+  // Mock translation:
+  const translation = html;
+  /*-----------------
+  */
+  
+  return translation;
 }
 
 async function createFile(name, html) {

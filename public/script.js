@@ -8,7 +8,7 @@ window.addEventListener("load", async () => {
 
   const newLinks = document.getElementById("newLinks");
 
-  if(pages.length > 0){
+  if (pages.length > 0) {
     translateBtn.disabled = true;
   }
 
@@ -33,17 +33,21 @@ translateBtn.addEventListener("click", async () => {
       html: sd.outerHTML,
     }),
   });
-  console.log(res);
-  const data = await res.json();
 
-  if (!data.fileName) return;
+  const data = await res.json();
+  console.log(data);
+
+  if (!data.length === 0) return;
   console.log("Creating links");
 
-  const newLinks = document.getElementById("newLinks");
-  const a = document.createElement("a");
-  a.href = `./results/${data.fileName}`;
-  a.innerText = data.fileName;
-  newLinks.appendChild(a);
+  for (const link of data) {
+    const newLinks = document.getElementById("newLinks");
+    const a = document.createElement("a");
+    a.href = `./results/${link}`;
+    a.innerText = link;
+    newLinks.appendChild(a);
+  }
+
 
   translateBtn.disabled = true;
 });

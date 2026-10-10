@@ -9,7 +9,7 @@ window.addEventListener("load", async () => {
   const newLinks = document.getElementById("newLinks");
 
   if (pages.length > 0) {
-    translateBtn.disabled = true;
+    //translateBtn.disabled = true;
   }
 
   for (const page of pages) {
@@ -49,5 +49,5 @@ translateBtn.addEventListener("click", async () => {
   }
 
 
-  translateBtn.disabled = true;
+  //translateBtn.disabled = true;
 });

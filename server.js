@@ -7,7 +7,20 @@ import fs from "node:fs/promises";
 dotenv.config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT;
+const API_KEY = process.env.API_KEY || "";
+
+
+const deeplClient = new deepl.DeepLClient(API_KEY);
+
+const TRANSLATION_RESULTS = {
+  "billedArray": {
+    "text": 0,
+    "empty": 0,
+    "total": 0,
+  },
+  "billedHtml": 0,
+};
 
 app.use(express.json());
 app.use(express.static("public"));
@@ -20,21 +33,35 @@ app.get("/pages", async (req, res) => {
 });
 
 app.post("/translate", async (req, res) => {
-  const dom = new JSDOM(req.body.html);
+  const body = req.body.html;
+  //const body = "<div><h1>Hallo Verden</h1><p>Hvordan går det?</p><p>   </p></div>";
   const filesCreated = [];
 
   // Translate with array of extracted text
-  const arrayTranslated = await translateArray(req.body.html);
+  const arrayTranslated = await translateArray(body);
   const arrayFile = await createFile("array_translation.html", arrayTranslated);
   if (arrayFile) {
-    filesCreated.push("array_translation.html");
+    filesCreated.push(arrayFile);
   }
 
   // Translate entire html directly
-  const htmlTranslated = await translateHtml(req.body.html);
+  const htmlTranslated = await translateHtml(body);
   const htmlFile = await createFile("html_translation.html", htmlTranslated);
-  if(htmlFile){
-    filesCreated.push("html_translation.html");
+  if (htmlFile) {
+    filesCreated.push(htmlFile);
+  }
+
+  // Create a summary page
+  const summaryHtml = `
+    <h1>Oppsummering</h1>
+    <p>Her ser du en oppsummering på antall tegn som er brukt for de ulike oversettelsene. Antall brukte tegn er tegn det blir tatt betalt for.</p>
+    <p>Antall tegn brukt på oversettelse hvor vi trekker ut tekst: ${TRANSLATION_RESULTS.billedArray.total}.</p>
+    <p>Av tegnene brukt på uttrekk er ${TRANSLATION_RESULTS.billedArray.empty} brukt på tomme elementer, og ${TRANSLATION_RESULTS.billedArray.text} er brukt på faktisk tekst.</p>
+    <p>Antall tegn brukt på oversettelse av html direkte: ${TRANSLATION_RESULTS.billedHtml}</p>
+  `;
+  const summaryFile = await createFile("summary.html", summaryHtml);
+  if(summaryFile){
+    filesCreated.push(summaryFile);
   }
 
 
@@ -65,21 +92,29 @@ async function translateArray(html) {
   * Check to see if removing nodes with empty spaces (line breaks, tabs, spaces) affects cost
    */
   const textToTranslate = textNodes.map((node) => node.nodeValue);
-
   /* TRANSLATE ARRAY 
   ----------------- */
 
   // Mock translation:
-  let translatedText = [];
+  /* let translatedText = [];
   for (const text of textToTranslate) {
     translatedText.push("lorem");
-  }
+  } */
+
+    const translation = await deeplClient.translateText(textToTranslate, "NB", "EN-GB", {modelType: "prefer_quality_optimized"});
+    console.log(translation);
   /*-----------------
   */
 
   // Replace translated text in each node
   textNodes.forEach((node, index) => {
-    node.nodeValue = translatedText[index];
+    node.nodeValue = translation[index].text;
+    if(/^[\\n\\t\s]*$/.test(translation[index].text)){
+      TRANSLATION_RESULTS.billedArray.empty += translation[index].billedCharacters;
+    } else {
+      TRANSLATION_RESULTS.billedArray.text += translation[index].billedCharacters;
+    }
+    TRANSLATION_RESULTS.billedArray.total += translation[index].billedCharacters;
   });
 
   return dom.serialize();
@@ -90,15 +125,32 @@ async function translateHtml(html) {
   /* TRANSLATE HTML 
 ----------------- */
 
-  // Mock translation:
-  const translation = html;
+  const translation = await deeplClient.translateText(html, "NB", "EN-GB", {
+    modelType: "prefer_quality_optimized",
+    tagHandling: "html",
+    tagHandlingVersion: "v2",
+  });
+
   /*-----------------
   */
-  
-  return translation;
+
+  TRANSLATION_RESULTS.billedHtml += translation.billedCharacters;
+
+  return translation.text;
 }
 
 async function createFile(name, html) {
+  const resultsDir = "./public/results";
+  // See if file exists
+  const files = await fs.readdir(resultsDir);
+
+  // If file exists, add an index to the end
+  let index = 1;
+  while(files.includes(name)){
+    name = name.slice(0,-5) + "_" + index + ".html";
+    index += 1;
+  }
+
   const content = `
         <!doctype html>
 <html lang="en">
@@ -120,11 +172,10 @@ async function createFile(name, html) {
 </html>`;
 
   try {
-    await fs.writeFile(`./public/results/${name}`, content);
-    return true;
+    await fs.writeFile(`${resultsDir}/${name}`, content);
+    return name;
   } catch (err) {
     console.error("Unable to write file", err);
-    return false;
   }
 }
 

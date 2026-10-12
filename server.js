@@ -7,7 +7,7 @@ import fs from "node:fs/promises";
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY || "";
 
 let deeplClient = null;

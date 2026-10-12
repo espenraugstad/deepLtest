@@ -2,7 +2,7 @@ const translateBtn = document.getElementById("translateBtn");
 
 window.addEventListener("load", async () => {
   console.log("Loaded");
-  const pagesRes = await fetch("/pages");
+  const pagesRes = await fetch("./pages");
   const files = await pagesRes.json();
   const pages = JSON.parse(files)
 
